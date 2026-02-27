@@ -99,6 +99,25 @@
       mix-blend-mode: screen;
       z-index: 19;
     }
+    #bossDamagePop {
+      position: fixed; inset: 0;
+      display: grid; place-items: center;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.7);
+      z-index: 18;
+      font-family: "Segoe UI", "Noto Sans JP", sans-serif;
+      font-size: clamp(84px, 18vw, 260px);
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      color: rgba(255, 216, 150, 0.96);
+      text-shadow:
+        0 0 18px rgba(255, 196, 110, 0.95),
+        0 0 38px rgba(255, 144, 80, 0.75),
+        0 0 66px rgba(255, 88, 60, 0.55);
+      transition: none;
+      will-change: transform, opacity;
+    }
   </style>
 </head>
 <body>
@@ -117,8 +136,9 @@
         <button class="start" id="startBtn">START</button>
       </div>
     </div>
-  </div>
+</div>
 <div id="damageVignette"></div>
+  <div id="bossDamagePop"></div>
   <div id="flash"></div>
 
   <!-- Three.js (CDN) -->
@@ -177,6 +197,7 @@
       centerMsg: document.getElementById("centerMsg"),
       flash: document.getElementById("flash"),
       vignette: document.getElementById("damageVignette"),
+      bossDamagePop: document.getElementById("bossDamagePop"),
       comboWrap: document.getElementById("comboWrap"),
       combo: document.getElementById("combo"),
       bossHud: document.getElementById("bossHud"),
@@ -224,6 +245,7 @@
     // ボス戦BGMの拍（ドロドロ）
     let bossBeatAcc = 0;
     const SFX_GAIN = 1.18;
+    let bossDamageTimer = 0;
 
     // -----------------------------
     // Three.js セットアップ
@@ -783,6 +805,7 @@
       if (!boss) return;
       boss.hp--;
       score += 6;
+      showBossDamagePop(Math.max(0, boss.hp));
 
       spawnSlash(boss.obj.position.clone());
       playSaber();
@@ -807,6 +830,28 @@
         nextBossScore += diff.bossEveryScore;
         bossBeatAcc = 0;
         updateHUD();
+      }
+    }
+
+    function showBossDamagePop(value) {
+      bossDamageTimer = 0.52;
+      ui.bossDamagePop.textContent = String(value);
+      ui.bossDamagePop.style.opacity = "1";
+      ui.bossDamagePop.style.transform = "scale(1.45)";
+      requestAnimationFrame(() => {
+        ui.bossDamagePop.style.transform = "scale(1.00)";
+      });
+    }
+
+    function updateBossDamagePop(dt) {
+      if (bossDamageTimer <= 0) return;
+      bossDamageTimer -= dt;
+      const t = Math.max(0, bossDamageTimer / 0.52);
+      ui.bossDamagePop.style.opacity = String(Math.min(1, t * 1.25));
+      const sc = 0.92 + t * 0.28;
+      ui.bossDamagePop.style.transform = `scale(${sc.toFixed(3)})`;
+      if (bossDamageTimer <= 0) {
+        ui.bossDamagePop.style.opacity = "0";
       }
     }
 
@@ -1445,6 +1490,8 @@
       bomProgress = "";
       boss = null;
       bossBeatAcc = 0;
+      bossDamageTimer = 0;
+      ui.bossDamagePop.style.opacity = "0";
 
       clearLetters();
       spawnTimer = 0;
@@ -1504,6 +1551,7 @@
       requestAnimationFrame(loop);
       const dt = Math.min(0.033, (now - lastT) / 1000);
       lastT = now;
+      updateBossDamagePop(dt);
 
       // 星
       const sp = starGeo.attributes.position.array;
